@@ -1,70 +1,290 @@
-# Getting Started with Create React App
+# Rayeva AI System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> An intelligent, prompt-driven application built on a React frontend with a modular AI orchestration layer.
 
-## Available Scripts
+🔗 **Live Demo:** [rayeva-ai-system-frontend.vercel.app](https://rayeva-ai-system-frontend.vercel.app)
+---
 
-In the project directory, you can run:
+## Overview
 
-### `npm start`
+Rayeva is an AI-powered system designed to [describe core purpose — e.g., "assist users in evaluating candidates", "automate document workflows", "provide intelligent search and recommendations"]. It combines a modern React frontend with a structured AI prompt layer to deliver consistent, high-quality responses across user interactions.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Architecture Overview
 
-### `npm test`
+### System Diagram
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Client (Browser)                     │
+│                                                         │
+│   ┌─────────────┐    ┌──────────────┐    ┌──────────┐  │
+│   │  React UI   │───▶│  State Mgmt  │───▶│  Router  │  │
+│   │  Components │    │  (Context /  │    │  (Pages) │  │
+│   └─────────────┘    │   Zustand)   │    └──────────┘  │
+│                       └──────┬───────┘                  │
+└──────────────────────────────┼──────────────────────────┘
+                               │ HTTP / WebSocket
+                               ▼
+┌─────────────────────────────────────────────────────────┐
+│                    API Gateway / BFF                     │
+│              (Next.js API Routes / Express)             │
+│                                                         │
+│   ┌──────────────┐    ┌──────────────┐                  │
+│   │  Auth / JWT  │    │  Rate Limit  │                  │
+│   └──────────────┘    └──────────────┘                  │
+└──────────────────────────────┬──────────────────────────┘
+                               │
+              ┌────────────────┼─────────────────┐
+              ▼                ▼                 ▼
+┌─────────────────┐  ┌──────────────────┐  ┌──────────┐
+│  AI Orchestrator│  │  Business Logic  │  │  DB /    │
+│                 │  │  Services        │  │  Storage │
+│  ┌───────────┐  │  └──────────────────┘  └──────────┘
+│  │  Prompt   │  │
+│  │  Builder  │  │
+│  └─────┬─────┘  │
+│        │        │
+│  ┌─────▼─────┐  │
+│  │  LLM API  │  │
+│  │(Anthropic/│  │
+│  │  OpenAI)  │  │
+│  └───────────┘  │
+└─────────────────┘
+```
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Frontend Layer
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+The frontend is a **React single-page application** deployed on Vercel.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+| Concern | Approach |
+|---|---|
+| Framework | React (Create React App / Next.js) |
+| Styling | Tailwind CSS / CSS Modules |
+| State | React Context or Zustand |
+| API Communication | `fetch` / `axios` with async/await |
+| Streaming Responses | `ReadableStream` / Server-Sent Events |
+| Deployment | Vercel (automatic CI/CD from `main`) |
 
-### `npm run eject`
+**Component Architecture:**
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```
+src/
+├── components/
+│   ├── chat/           # Conversation UI, message bubbles, input
+│   ├── layout/         # Shell, sidebar, header
+│   └── shared/         # Buttons, modals, loaders
+├── pages/              # Route-level components
+├── hooks/              # useChat, useStream, useSession
+├── services/           # API client wrappers
+├── prompts/            # Prompt templates (if client-side)
+└── utils/              # Formatters, parsers, helpers
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### AI Orchestration Layer
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+The AI orchestration layer sits server-side and is responsible for:
 
-## Learn More
+1. **Prompt assembly** — combining system instructions, user context, and conversation history into a well-formed request
+2. **Model routing** — selecting the appropriate model (e.g., Claude Sonnet for speed, Opus for complex reasoning)
+3. **Response parsing** — extracting structured data or streaming text back to the client
+4. **Memory management** — summarizing or truncating conversation history to stay within context limits
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+Incoming Request
+      │
+      ▼
+┌─────────────────────────────┐
+│       Prompt Builder        │
+│  ┌─────────────────────┐    │
+│  │  System Prompt      │    │
+│  │  + User Context     │    │
+│  │  + History (trimmed)│    │
+│  │  + Current Input    │    │
+│  └─────────────────────┘    │
+└────────────┬────────────────┘
+             │
+             ▼
+      LLM API Call
+             │
+             ▼
+┌─────────────────────────────┐
+│     Response Handler        │
+│  • Stream to client, OR     │
+│  • Parse JSON output, OR    │
+│  • Route to tool/function   │
+└─────────────────────────────┘
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+### Backend & Data Layer
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+| Component | Purpose |
+|---|---|
+| API Routes | Thin request handlers; delegate to services |
+| Session Store | Redis or DB-backed conversation history |
+| Vector Store | (Optional) Semantic search for RAG patterns |
+| Database | User data, preferences, audit logs |
+| Object Storage | File uploads, documents fed to AI context |
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## AI Prompt Design
 
-### Making a Progressive Web App
+### Prompt Philosophy
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+Rayeva's prompt design follows three core principles:
 
-### Advanced Configuration
+1. **Specificity over generality** — Every system prompt defines a clear role, output format, and behavioral boundaries. Vague instructions produce vague outputs.
+2. **Context before instruction** — Relevant user data and session context is injected *before* the task instruction, so the model reasons with full information.
+3. **Constrained output format** — Where structured data is needed, the model is explicitly instructed to return JSON with a defined schema — never free-form prose.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
+### Prompt Structure
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+Every prompt in Rayeva follows this layered structure:
 
-### `npm run build` fails to minify
+```
+┌─────────────────────────────────────────┐
+│  LAYER 1 — SYSTEM PROMPT                │
+│  Role definition, tone, constraints,    │
+│  output format instructions             │
+├─────────────────────────────────────────┤
+│  LAYER 2 — CONTEXT INJECTION            │
+│  User profile, session data,            │
+│  retrieved documents (RAG), history     │
+├─────────────────────────────────────────┤
+│  LAYER 3 — TASK INSTRUCTION             │
+│  The specific action for this turn      │
+│  ("Summarize X", "Extract Y", etc.)     │
+├─────────────────────────────────────────┤
+│  LAYER 4 — OUTPUT CONSTRAINTS           │
+│  "Respond only in JSON.", format spec,  │
+│  length limits, language requirements   │
+└─────────────────────────────────────────┘
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
+
+### System Prompt Template
+
+```
+You are Rayeva, an AI assistant for [product domain].
+
+## Role
+[Describe what the assistant does and for whom.]
+
+## Behavior
+- Be concise and direct. Avoid filler phrases.
+- Ask clarifying questions only when critical information is missing.
+- Never make assumptions about [sensitive domain-specific data].
+- If you cannot complete a task, explain clearly why and suggest an alternative.
+
+## Output Format
+[Describe expected format: plain text / markdown / JSON schema]
+
+## Boundaries
+- Do not discuss topics outside of [defined scope].
+- Do not speculate about [restricted areas].
+- If asked for personal opinions on [topic], redirect professionally.
+
+## Tone
+[Professional / Friendly / Neutral / Technical] — adapt to the user's level of expertise.
+```
+
+---
+
+### Context Injection Pattern
+
+User context is injected dynamically per request using a builder function:
+
+```javascript
+function buildPrompt({ systemPrompt, userProfile, history, documents, userMessage }) {
+  const contextBlock = [
+    userProfile ? `## User Context\n${formatProfile(userProfile)}` : '',
+    documents?.length ? `## Relevant Documents\n${documents.map(d => d.content).join('\n\n')}` : '',
+    history?.length ? `## Conversation History\n${formatHistory(history)}` : '',
+  ].filter(Boolean).join('\n\n');
+
+  return [
+    { role: 'system', content: `${systemPrompt}\n\n${contextBlock}` },
+    { role: 'user', content: userMessage },
+  ];
+}
+```
+
+**History truncation** — To avoid exceeding context limits, conversation history is trimmed with a token budget:
+
+```javascript
+function trimHistory(history, maxTokens = 4000) {
+  let total = 0;
+  const trimmed = [];
+  for (const msg of [...history].reverse()) {
+    const tokens = estimateTokens(msg.content);
+    if (total + tokens > maxTokens) break;
+    trimmed.unshift(msg);
+    total += tokens;
+  }
+  return trimmed;
+}
+```
+
+---
+
+### Guardrails & Safety
+
+| Risk | Mitigation |
+|---|---|
+| Prompt injection from user input | User input is always in the `user` role, never interpolated into `system` |
+| Runaway verbosity | `max_tokens` cap enforced on every API call |
+| Hallucinated facts | Ground responses with retrieved documents (RAG); instruct model to cite sources |
+| Sensitive data leakage | PII stripped from logs; context cleared on session end |
+| Off-topic responses | System prompt defines explicit scope; out-of-scope queries trigger a canned redirect |
+
+---
+
+## Key Design Decisions
+
+### Why a server-side prompt builder?
+Keeping prompt assembly server-side means:
+- API keys are never exposed to the client
+- Prompt templates can be updated without a frontend deploy
+- User input is safely sandboxed in the `user` message role
+
+### Why stream responses?
+Streaming (`ReadableStream` / SSE) dramatically improves perceived responsiveness for long AI outputs. Users see tokens appear in real time rather than waiting for a full response.
+
+### Why structured JSON output for some flows?
+For flows that require downstream logic (e.g., routing, form-filling, data extraction), instructing the model to output JSON allows the application to parse and act on the result programmatically — not just display text.
+
+---
+
+## Getting Started
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/rayeva-ai-system.git
+cd rayeva-ai-system
+
+# Install dependencies
+npm install
+
+# Set environment variables
+cp .env.example .env
+# Add your LLM API key and other config to .env
+
+# Run locally
+npm run dev
+```
+
+
+---
+
+*README generated for Rayeva AI System · Update sections marked with `[brackets]` to match your specific implementation.*
